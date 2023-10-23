@@ -12,9 +12,12 @@ import javax.annotation.Resource;
 @Configuration
 public class MvcConfig implements WebMvcConfigurer{
 
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new LoginInterceptor()).excludePathPatterns(
+        registry.addInterceptor(new LoginInterceptor(stringRedisTemplate)).excludePathPatterns(
                 "/user/code",
                 "/user/login",
                 "/shop/**",
