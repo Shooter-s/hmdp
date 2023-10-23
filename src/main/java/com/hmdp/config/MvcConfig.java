@@ -17,7 +17,7 @@ public class MvcConfig implements WebMvcConfigurer{
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new LoginInterceptor(stringRedisTemplate)).excludePathPatterns(
+        registry.addInterceptor(new LoginInterceptor()).excludePathPatterns(
                 "/user/code",
                 "/user/login",
                 "/shop/**",
@@ -25,6 +25,7 @@ public class MvcConfig implements WebMvcConfigurer{
                 "/blog/hot",
                 "/voucher/**",
                 "/upload/**"
-        );
+        ).order(1);
+        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate)).addPathPatterns("/**").order(0);
     }
 }
