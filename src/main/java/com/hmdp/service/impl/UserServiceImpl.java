@@ -37,19 +37,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Override
     public Result sedCode(String phone, HttpSession session) {
-        //1. 校验手机号
-        if (RegexUtils.isPhoneInvalid(phone)) {
-            //2.如果不符合，返回错误信息
-            return Result.fail("手机号格式错误");
+        //1、校验手机号
+        if (RegexUtils.isPhoneInvalid(phone)){
+            //2、如果不符合，返回错误信息
+            return Result.fail("手机格式错误");
         }
-
-        //3. 符合，生成验证码
+        //3、符合、生成验证码
         String code = RandomUtil.randomNumbers(6);
-        //4. 保存验证码到session
+        //4、保存验证码到session中
         session.setAttribute("code",code);
-        //5. 发送验证码
-        log.debug("发送短信验证码成功，验证码:{}",code);
-        //返回ok
+        //5、发送验证码
+        log.debug("发送验证码成功，验证码：{}",code);
         return Result.ok();
     }
 
