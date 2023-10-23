@@ -10,12 +10,15 @@ import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.RegexUtils;
+import com.hmdp.utils.SystemConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
+
+import java.util.List;
 
 import static com.hmdp.utils.SystemConstants.USER_NICK_NAME_PREFIX;
 
@@ -53,41 +56,37 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Override
     public Result login(LoginFormDTO loginForm, HttpSession session) {
-        //1. 校验手机号
+        //1、校验手机号
         String phone = loginForm.getPhone();
-        if (RegexUtils.isPhoneInvalid(phone)) {
-            return Result.fail("手机号格式错误");
+        if (RegexUtils.isPhoneInvalid(phone)){
+            return Result.fail("手机格式错误");
         }
-        //2. 校验验证码
+//        2、校验验证码
         Object cacheCode = session.getAttribute("code");
         String code = loginForm.getCode();
         if (cacheCode == null || !cacheCode.toString().equals(code)){
-            //3. 不一致，报错
+//        3、不一致，报错
             return Result.fail("验证码错误");
         }
-
-        //4.一致，根据手机号查询用户
+//        4、一致，根据手机号查询用户
+        //select * from tb_user where phone = ?
         User user = query().eq("phone", phone).one();
-
-        //5. 判断用户是否存在
+//        5、判断用户是否存在
         if (user == null){
-            //6. 不存在，创建新用户
+//        6、不存在，创建新用户并保存
             user = createUserWithPhone(phone);
         }
-
-        //7.保存用户信息到session
-        session.setAttribute("user",BeanUtil.copyProperties(user,UserDTO.class));
+//        7、保存用户信息到session中
+        session.setAttribute("user", user);
         return Result.ok();
     }
 
-
-
     private User createUserWithPhone(String phone) {
-        // 1.创建用户
+
+        //保存用户(password，nickName)
         User user = new User();
         user.setPhone(phone);
         user.setNickName(USER_NICK_NAME_PREFIX + RandomUtil.randomString(10));
-        // 2.保存用户
         save(user);
         return user;
     }
