@@ -15,4 +15,10 @@ import com.hmdp.entity.Shop;
 public interface IShopService extends IService<Shop> {
 
 
+    /**
+     * 根据id查询商户信息
+     * @param id
+     * @return
+     */
+    Result queryById(Long id);
 }
