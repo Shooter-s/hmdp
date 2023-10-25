@@ -50,7 +50,10 @@ public class IVoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vo
         if (seckillVoucher.getStock() < 1){
             return Result.fail("库存不足");
         }
-        boolean success = seckillVoucherService.update().setSql("stock = stock - 1").eq("voucher_id", voucherId).update();
+        boolean success = seckillVoucherService.update()
+                .setSql("stock = stock - 1")
+                .eq("voucher_id", voucherId)
+                .gt("stock",0).update();
         if (!success){
             return Result.fail("库存不足");
         }
@@ -65,6 +68,6 @@ public class IVoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vo
         //代金券id
         voucherOrder.setVoucherId(voucherId);
         save(voucherOrder);
-        return Result.ok();
+        return Result.ok(orderId);
     }
 }
