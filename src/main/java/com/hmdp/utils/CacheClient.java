@@ -116,7 +116,7 @@ public class CacheClient {
                 }
             });
         }
-        //返回过期的商铺信息
+        //返回未获得锁的
         return r;
     }
 

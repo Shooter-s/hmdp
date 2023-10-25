@@ -36,6 +36,7 @@ public class RedisIdWorker {
         //自增长
         Long count = stringRedisTemplate.opsForValue().increment("icr:" + keyPrefix + ":" + date);
         //3、拼接并返回，因为返回的是long类型的，所以用位运算去拼接
+        //将时间戳左移32位，空出来的32位并上redis自增序列
         return timestamp << COUNT_BITS | count;
     }
 
