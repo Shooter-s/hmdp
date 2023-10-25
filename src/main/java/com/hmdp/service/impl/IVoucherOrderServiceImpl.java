@@ -10,8 +10,10 @@ import com.hmdp.mapper.VoucherMapper;
 import com.hmdp.mapper.VoucherOrderMapper;
 import com.hmdp.service.ISeckillVoucherService;
 import com.hmdp.service.IVoucherOrderService;
+import com.hmdp.service.IVoucherService;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.UserHolder;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +38,6 @@ public class IVoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vo
     private RedisIdWorker redisIdWorker;
 
     @Override
-    @Transactional
     public Result seckillVoucher(Long voucherId) {
         //1、查询优惠券信息
         SeckillVoucher seckillVoucher = seckillVoucherService.getById(voucherId);
@@ -50,6 +51,25 @@ public class IVoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vo
         if (seckillVoucher.getStock() < 1){
             return Result.fail("库存不足");
         }
+
+        Long userId = UserHolder.getUser().getId();
+        synchronized (userId.toString().intern()) {
+            //拿到事务代理的对象，目标对象是实现类实现的接口
+            IVoucherOrderService proxy = (IVoucherOrderService) AopContext.currentProxy();
+            //用代理对象调用事务管理的方法。基于接口去调用
+            return proxy.createVoucherOrder(voucherId);
+        }
+    }
+
+    @Transactional
+    public Result createVoucherOrder(Long voucherId) {
+        //一人一单
+        //用户id
+        Long userId = UserHolder.getUser().getId();
+        int count = query().eq("user_id", userId).eq("voucher_id", voucherId).count();
+        if (count > 0){
+            return Result.fail("用户已买");
+        }
         boolean success = seckillVoucherService.update()
                 .setSql("stock = stock - 1")
                 .eq("voucher_id", voucherId)
@@ -62,12 +82,11 @@ public class IVoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vo
         //订单id
         long orderId = redisIdWorker.nextId("order");
         voucherOrder.setId(orderId);
-        //用户id
-        Long userId = UserHolder.getUser().getId();
         voucherOrder.setUserId(userId);
         //代金券id
         voucherOrder.setVoucherId(voucherId);
         save(voucherOrder);
         return Result.ok(orderId);
     }
+
 }
