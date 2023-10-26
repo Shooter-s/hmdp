@@ -25,9 +25,8 @@ public class SimpleRedisLock implements ILock {
     private static final String KEY_PREFIX = "lock:";
     private static final String ID_PREFIX = UUID.randomUUID().toString(true) + "-";
     private static final DefaultRedisScript<Long> UNLOCK_SCRIPT;
-
+    //初始化脚本
     static {
-        //初始化脚本
         UNLOCK_SCRIPT = new DefaultRedisScript<>();
         UNLOCK_SCRIPT.setLocation(new ClassPathResource("unlock.lua"));
         UNLOCK_SCRIPT.setResultType(Long.class);
@@ -35,7 +34,7 @@ public class SimpleRedisLock implements ILock {
 
     @Override
     public boolean tryLock(long timeoutSec) {
-        //获取当前线程的id
+        //获取当前线程的id(通过uuid和线程id去拼接)
         String threadId = ID_PREFIX + Thread.currentThread().getId();
         //获取锁
         Boolean success = stringRedisTemplate

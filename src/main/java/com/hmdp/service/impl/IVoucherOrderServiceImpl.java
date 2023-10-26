@@ -55,9 +55,9 @@ public class IVoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vo
         if (seckillVoucher.getStock() < 1){
             return Result.fail("库存不足");
         }
-
+        //分布式锁
         Long userId = UserHolder.getUser().getId();
-        //创建锁对象
+        //创建锁对象(针对单个用户刷单情况，所以把userId拼接进来)
         SimpleRedisLock lock = new SimpleRedisLock("order:" + userId,stringRedisTemplate);
         //获取锁
         boolean isLock = lock.tryLock(1200);
@@ -80,26 +80,30 @@ public class IVoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vo
         //用户id
         Long userId = UserHolder.getUser().getId();
         int count = query().eq("user_id", userId).eq("voucher_id", voucherId).count();
+        //订单已存在
         if (count > 0){
             return Result.fail("用户已买");
         }
+        //修改数据库
         boolean success = seckillVoucherService.update()
                 .setSql("stock = stock - 1")
                 .eq("voucher_id", voucherId)
+                //乐观锁
                 .gt("stock",0).update();
         if (!success){
             return Result.fail("库存不足");
         }
         //3、创建订单，并且返回订单id
         VoucherOrder voucherOrder = new VoucherOrder();
-        //订单id
+        //订单id(根据redisIdWorker生成全局Id)
         long orderId = redisIdWorker.nextId("order");
         voucherOrder.setId(orderId);
         voucherOrder.setUserId(userId);
         //代金券id
         voucherOrder.setVoucherId(voucherId);
+        //保存到数据库中
         save(voucherOrder);
+        //返回
         return Result.ok(orderId);
     }
-
 }
