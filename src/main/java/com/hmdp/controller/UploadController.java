@@ -24,7 +24,7 @@ public class UploadController {
             String originalFilename = image.getOriginalFilename();
             // 生成新文件名
             String fileName = createNewFileName(originalFilename);
-            // 保存文件
+            // 保存文件(目录在前端服务器nginx下)
             image.transferTo(new File(SystemConstants.IMAGE_UPLOAD_DIR, fileName));
             // 返回结果
             log.debug("文件上传成功，{}", fileName);
@@ -55,6 +55,7 @@ public class UploadController {
         // 判断目录是否存在
         File dir = new File(SystemConstants.IMAGE_UPLOAD_DIR, StrUtil.format("/blogs/{}/{}", d1, d2));
         if (!dir.exists()) {
+            //创建目录
             dir.mkdirs();
         }
         // 生成文件名
