@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.connection.BitFieldSubCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -128,6 +129,40 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         //5、写入Redis SETBIT key offset 1
         stringRedisTemplate.opsForValue().setBit(key,dayOfMonth - 1,true);
         return Result.ok();
+    }
+
+    @Override
+    public Result signCount() {
+        Long userId = UserHolder.getUser().getId();
+        LocalDateTime now = LocalDateTime.now();
+        String keySuffix = now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
+        int dayOfMonth = now.getDayOfMonth();
+        String key = "sign:" + userId + keySuffix;
+        //获取本月截止今日为止的所有的签到记录，返回的是十进制
+        //bitfield key get udayOfMonth 0
+        List<Long> result = stringRedisTemplate.opsForValue().bitField(key,
+                BitFieldSubCommands.create()
+                        .get(BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth)).valueAt(0)
+        );
+        if (result == null || result.isEmpty()){
+            return Result.ok(0);
+        }
+        //因为我们只传了一个get，所以从List集合中取出来
+        Long num = result.get(0);
+        if (num == null || num == 0){
+            return Result.ok(0);
+        }
+        int count = 0;
+        while (true){
+            //循环遍历，将数字与1做与运算，得到数字的最后一个bit位
+            //判断是否为0，若为0，说明签到，结束，反之右移一位，计数器加一，继续循环。
+            if ((num & 1) == 0){
+                break;
+            }
+            num = num >>> 1;
+            count++;
+        }
+        return Result.ok(count);
     }
 
     private User createUserWithPhone(String phone) {
