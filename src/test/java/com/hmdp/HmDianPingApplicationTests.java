@@ -8,12 +8,17 @@ import com.hmdp.utils.RedisIdWorker;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.geo.Point;
+import org.springframework.data.redis.connection.RedisGeoCommands;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import javax.annotation.Resource;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @SpringBootTest
 class HmDianPingApplicationTests {
@@ -26,6 +31,9 @@ class HmDianPingApplicationTests {
 
     @Resource
     private RedisIdWorker redisIdWorker;
+
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
 
     private ExecutorService es = Executors.newFixedThreadPool(500);
 
@@ -56,4 +64,28 @@ class HmDianPingApplicationTests {
         cacheClient.setWithLogicalExpire(RedisConstants.CACHE_SHOP_KEY + 1L,shop,10L, TimeUnit.SECONDS);
     }
 
+    @Test
+    public void testLoadShopData(){
+        //查询店铺信息
+        List<Shop> list = shopService.list();
+        //把店铺分组，按照typeId分组，typeId一致的放到一个集合
+        Map<Long, List<Shop>> map = list.stream().collect(Collectors.groupingBy(shop -> shop.getTypeId()));
+        //分批完成写入redis
+        for (Map.Entry<Long, List<Shop>> entry : map.entrySet()) {
+            //获取类型id
+            Long typeId = entry.getKey();
+            String key = "shop:geo:" + typeId;
+            //获取同类型的店铺集合
+            List<Shop> shops = entry.getValue();
+            //写入redis geoadd key 精度 维度 member
+            List<RedisGeoCommands.GeoLocation<String>> locations = new ArrayList<>();
+            for (Shop shop : shops) {
+                locations.add(new RedisGeoCommands.GeoLocation<>(
+                        shop.getId().toString(),
+                        new Point(shop.getX(),shop.getY())
+                ));
+            }
+            stringRedisTemplate.opsForGeo().add(key,locations);
+        }
+    }
 }
